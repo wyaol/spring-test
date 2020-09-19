@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -105,5 +107,20 @@ class RsServiceTest {
         int eventId = 1;
         rsService.buy(trade, eventId);
         verify(tradeRepository).save(tradeDto);
+    }
+
+    @Test
+    void shouldThrowWhenAmountNotEnough() throws Exception {
+        TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
+        tradeRepository.save(tradeDto);
+        Trade trade= new Trade(1, 1, 1, 1);
+        int eventId = 1;
+        List<TradeDto> tradeDtos = new ArrayList<>();
+        tradeDtos.add(tradeDto);
+        when(tradeRepository.findAllByRankOrderByAmountDesc(anyInt())).thenReturn(tradeDtos);
+
+        assertThrows(Exception.class, () -> {
+            rsService.buy(trade, eventId);
+        });
     }
 }
