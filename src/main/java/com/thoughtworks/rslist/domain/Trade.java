@@ -12,4 +12,10 @@ public class Trade {
     private Integer eventId;
     private Integer rank;
     private Integer amount;
+
+    public Trade(Integer userId, Integer rank, Integer amount) {
+        this.userId = userId;
+        this.rank = rank;
+        this.amount = amount;
+    }
 }

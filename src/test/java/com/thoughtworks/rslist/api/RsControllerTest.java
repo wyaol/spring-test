@@ -1,11 +1,14 @@
 package com.thoughtworks.rslist.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
+import com.thoughtworks.rslist.repository.TradeRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import com.thoughtworks.rslist.service.RsService;
@@ -24,8 +27,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,6 +42,8 @@ class RsControllerTest {
     @Autowired VoteRepository voteRepository;
     @Autowired
     RsService rsService;
+    @Autowired
+    TradeRepository tradeRepository;
     private UserDto userDto;
 
     @BeforeEach
@@ -193,12 +197,47 @@ class RsControllerTest {
 
     @Test
     public void should_buy_event() throws Exception {
-        Trade trade = new Trade(1, 1, 1, 1);
+        Trade trade = new Trade(1, 1, 1);
         Integer eventId = 2;
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(trade);
 
         mockMvc.perform(post("/rs/buy/" + eventId).content(json).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    public void should_throw_when_amount_is_not_enough() throws Exception {
+        TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
+        tradeRepository.save(tradeDto);
+
+        Trade trade = new Trade(1, 1, 1);
+        Integer eventId = 2;
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(trade);
+
+        mockMvc.perform(post("/rs/buy/" + eventId).content(json).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("金钱不足 目前该排行的购买金额为1")));
+
+        tradeRepository.findById(1);
+    }
+
+    @Test
+    public void should_buy_and_delete_old_when_amount_is_enough() throws Exception {
+        userRepository.save(userDto);
+        RsEventDto rsEventDto = new RsEventDto(1, "1", "1", 1, userDto);
+        rsEventRepository.save(rsEventDto);
+        TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
+        tradeRepository.save(tradeDto);
+
+        Trade trade = new Trade(1, 1, 2);
+        Integer eventId = 2;
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(trade);
+
+        mockMvc.perform(post("/rs/buy/" + eventId).content(json).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        assertFalse(rsEventRepository.findById(1).isPresent());
     }
 }

@@ -104,6 +104,7 @@ public class RsController {
 
     @ExceptionHandler({Exception.class})
     public ResponseEntity<Error> handleRequestErrorHandler(Exception e) {
+        e.printStackTrace();
         Error error = new Error();
         error.setError(e.getMessage());
         return ResponseEntity.badRequest().body(error);
