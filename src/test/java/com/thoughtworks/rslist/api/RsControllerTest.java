@@ -3,6 +3,7 @@ package com.thoughtworks.rslist.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
+import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
 import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -35,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class RsControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired UserRepository userRepository;
@@ -151,7 +154,7 @@ class RsControllerTest {
         mockMvc
                 .perform(post("/rs/event").content(jsonValue).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated());
-        List<RsEventDto> all = rsEventRepository.findAll();
+        List<RsEventDto> all = rsEventRepository.findAllOrderByVoteNumDesc();
         assertNotNull(all);
         assertEquals(all.size(), 1);
         assertEquals(all.get(0).getEventName(), "猪肉涨价了");
@@ -226,8 +229,10 @@ class RsControllerTest {
     @Test
     public void should_buy_and_delete_old_when_amount_is_enough() throws Exception {
         userRepository.save(userDto);
-        RsEventDto rsEventDto = new RsEventDto(1, "1", "1", 1, userDto);
+        RsEventDto rsEventDto = new RsEventDto(1, "1", "1", 5, userDto);
+        RsEventDto rsEventDto2 = new RsEventDto(2, "1", "1", 1, userDto);
         rsEventRepository.save(rsEventDto);
+        rsEventRepository.save(rsEventDto2);
         TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
         tradeRepository.save(tradeDto);
 
@@ -239,5 +244,29 @@ class RsControllerTest {
         mockMvc.perform(post("/rs/buy/" + eventId).content(json).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         assertFalse(rsEventRepository.findById(1).isPresent());
+    }
+
+    @Test
+    public void should_get_order_event() throws Exception {
+        userRepository.save(userDto);
+        RsEventDto rsEventDto = new RsEventDto(1, "1", "1", 1, userDto);
+        RsEventDto rsEventDto2 = new RsEventDto(2, "2", "1", 2, userDto);
+        RsEventDto rsEventDto3 = new RsEventDto(3, "3", "1", 3, userDto);
+        RsEventDto rsEventDto4 = new RsEventDto(4, "4", "1", 4, userDto);
+        RsEventDto rsEventDto5 = new RsEventDto(5, "5", "1", 5, userDto);
+        rsEventRepository.save(rsEventDto);
+        rsEventRepository.save(rsEventDto2);
+        rsEventRepository.save(rsEventDto3);
+        rsEventRepository.save(rsEventDto4);
+        rsEventRepository.save(rsEventDto5);
+
+        mockMvc.perform((get("/rs/list")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[0].eventName", is("5")))
+                .andExpect(jsonPath("$[1].eventName", is("4")))
+                .andExpect(jsonPath("$[2].eventName", is("3")))
+                .andExpect(jsonPath("$[3].eventName", is("2")))
+                .andExpect(jsonPath("$[4].eventName", is("1")));
     }
 }

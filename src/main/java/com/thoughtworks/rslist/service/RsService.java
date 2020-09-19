@@ -56,20 +56,37 @@ public class RsService {
 
     @Transactional
     public void buy(Trade trade, int id) throws Exception {
-        TradeDto tradeDto = TradeDto.builder().rank(trade.getRank()).userId(trade.getUserId()).amount(trade.getAmount()).build();
+        trade.setEventId(id);
+        TradeDto tradeDto = TradeDto.builder().rank(trade.getRank()).userId(trade.getUserId()).amount(trade.getAmount()).eventId(trade.getEventId()).build();
         List<TradeDto> tradeDtos = tradeRepository.findAllByRankOrderByAmountDesc(trade.getRank());
         if (tradeDtos.size() == 0) {
-            tradeDto.setEventId(id);
             tradeRepository.save(tradeDto);
         } else {
             TradeDto oldTrad = tradeDtos.get(0);
             if (trade.getAmount() <= oldTrad.getAmount())
                 throw new Exception("金钱不足 目前该排行的购买金额为" + String.valueOf(oldTrad.getAmount()));
             else {
-                tradeDto.setEventId(id);
                 tradeRepository.save(tradeDto);
+
+                // 获取该排行旧热搜
+                RsEventDto rsEventDtoOld = getRsEventDto(oldTrad.getEventId());
+
+                // 删除旧热搜
                 rsEventRepository.deleteById(oldTrad.getEventId());
+
+                // 获取要购买的热搜
+                RsEventDto rsEventDto = getRsEventDto(trade.getEventId());
+
+                // 更新该热搜的投票数和被替换的一样
+                rsEventDto.setVoteNum(rsEventDtoOld.getVoteNum());
+                rsEventRepository.save(rsEventDto);
             }
         }
+    }
+
+    private RsEventDto getRsEventDto(Integer eventId) throws Exception {
+        Optional<RsEventDto> res = rsEventRepository.findById(eventId);
+        if (!res.isPresent()) throw new Exception("该热搜不存在");
+        return res.get();
     }
 }

@@ -37,15 +37,13 @@ public class RsController {
     public ResponseEntity<List<RsEvent>> getRsEventListBetween(
             @RequestParam(required = false) Integer start, @RequestParam(required = false) Integer end) {
         List<RsEvent> rsEvents =
-                rsEventRepository.findAll().stream()
-                        .map(
-                                item ->
-                                        RsEvent.builder()
-                                                .eventName(item.getEventName())
-                                                .keyword(item.getKeyword())
-                                                .userId(item.getId())
-                                                .voteNum(item.getVoteNum())
-                                                .build())
+                rsEventRepository.findAllOrderByVoteNumDesc().stream()
+                        .map(item -> RsEvent.builder()
+                                .eventName(item.getEventName())
+                                .keyword(item.getKeyword())
+                                .userId(item.getId())
+                                .voteNum(item.getVoteNum())
+                                .build())
                         .collect(Collectors.toList());
         if (start == null || end == null) {
             return ResponseEntity.ok(rsEvents);
@@ -56,7 +54,7 @@ public class RsController {
     @GetMapping("/rs/{index}")
     public ResponseEntity<RsEvent> getRsEvent(@PathVariable int index) {
         List<RsEvent> rsEvents =
-                rsEventRepository.findAll().stream()
+                rsEventRepository.findAllOrderByVoteNumDesc().stream()
                         .map(
                                 item ->
                                         RsEvent.builder()
