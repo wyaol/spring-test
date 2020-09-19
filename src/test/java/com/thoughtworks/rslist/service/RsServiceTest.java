@@ -1,7 +1,9 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
@@ -94,5 +96,14 @@ class RsServiceTest {
                 () -> {
                     rsService.vote(vote, 1);
                 });
+    }
+
+    @Test
+    void shouldBuyWhenFirst() throws Exception {
+        Trade trade= new Trade(1, 1, 1, 1);
+        TradeDto tradeDto = TradeDto.builder().amount(trade.getAmount()).eventId(trade.getEventId()).userId(trade.getUserId()).rank(trade.getRank()).build();
+        int eventId = 1;
+        rsService.buy(trade, eventId);
+        verify(tradeRepository).save(tradeDto);
     }
 }
