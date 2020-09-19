@@ -102,7 +102,7 @@ class RsServiceTest {
 
     @Test
     void shouldBuyWhenFirst() throws Exception {
-        Trade trade= new Trade(1, 1, 1, 1);
+        Trade trade = new Trade(1, 1, 1, 1);
         TradeDto tradeDto = TradeDto.builder().amount(trade.getAmount()).eventId(trade.getEventId()).userId(trade.getUserId()).rank(trade.getRank()).build();
         int eventId = 1;
         rsService.buy(trade, eventId);
@@ -110,10 +110,10 @@ class RsServiceTest {
     }
 
     @Test
-    void shouldThrowWhenAmountNotEnough() throws Exception {
+    void shouldThrowWhenAmountNotEnough() {
         TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
         tradeRepository.save(tradeDto);
-        Trade trade= new Trade(1, 1, 1, 1);
+        Trade trade = new Trade(1, 1, 1, 1);
         int eventId = 1;
         List<TradeDto> tradeDtos = new ArrayList<>();
         tradeDtos.add(tradeDto);
@@ -122,5 +122,21 @@ class RsServiceTest {
         assertThrows(Exception.class, () -> {
             rsService.buy(trade, eventId);
         });
+    }
+
+    @Test
+    void shouldBuyAndDeleteOldWhenAmountIsEnough() throws Exception {
+        TradeDto tradeDto = new TradeDto(1, 1, 1, 1, 1);
+        tradeRepository.save(tradeDto);
+        Trade trade = new Trade(1, 1, 1, 2);
+        int eventId = 2;
+        List<TradeDto> tradeDtos = new ArrayList<>();
+        tradeDtos.add(tradeDto);
+        when(tradeRepository.findAllByRankOrderByAmountDesc(anyInt())).thenReturn(tradeDtos);
+
+        rsService.buy(trade, eventId);
+
+        verify(tradeRepository).save(tradeDto);
+        verify(rsEventRepository).deleteById(tradeDto.getId());
     }
 }
